@@ -1,9 +1,8 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
-title 問題清單平台 - 服務執行中
+title Issue Platform - Server Running
 
-REM ---- 嘗試找到 Node.js ----
+REM ---- Find Node.js ----
 where node >nul 2>nul
 if not errorlevel 1 goto node_ok
 
@@ -21,18 +20,18 @@ for %%P in (
   )
 )
 
-echo [錯誤] 找不到 Node.js，請先執行 setup.bat 或修改路徑
+echo [ERROR] Node.js not found. Run setup.bat first or add Node to PATH.
 pause
 exit /b 1
 
 :node_ok
 echo ===========================================
-echo  問題清單平台 啟動中...
+echo   Issue Platform - Starting...
 echo.
-echo  啟動完成後，請在瀏覽器開啟：
-echo    http://localhost:3000
+echo   Once ready, open in browser:
+echo     http://localhost:3000
 echo.
-echo  停止服務：在此視窗按 Ctrl+C，或直接關閉視窗
+echo   To stop: press Ctrl+C or close this window
 echo ===========================================
 echo.
 
