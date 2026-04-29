@@ -28,12 +28,24 @@ timestamp.
 
 ## Quick start
 
+### Windows 一鍵啟動（最簡單）
+
+1. 雙擊 **`setup.bat`** — 首次安裝（自動裝套件 + 建資料庫 + 建管理員）
+2. 雙擊 **`start.bat`** — 啟動服務
+3. 開瀏覽器到 <http://localhost:3000>
+4. 用 `admin / admin123` 登入
+
+之後每天只要雙擊 `start.bat` 即可。
+（`setup.bat` 會自動偵測 Node.js 位置，包含 `D:\NodeJS\…` 等常見路徑）
+
+### 命令列（Mac / Linux 或想自己跑）
+
 ```bash
 # 1) Install
 npm install
 
 # 2) Initialize database (creates ./prisma/dev.db)
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 
 # 3) Seed default admin and departments (OP / PE / PC / SALES)
 npm run prisma:seed
