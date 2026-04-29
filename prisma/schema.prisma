@@ -1,0 +1,95 @@
+// Prisma schema for the multi-department issue list platform.
+// SQLite is used for fast dev/cloud deployment; switch provider to
+// "postgresql" or "mysql" when moving to the company intranet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Roles, statuses, priorities are stored as strings since SQLite does not
+// support enums; allowed values are validated in the API layer.
+// Roles:        ADMIN | USER
+// IssueStatus:  PENDING | IN_PROGRESS | AWAITING_CONFIRMATION | COMPLETED
+// Priority:     LOW | MEDIUM | HIGH | URGENT
+
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  passwordHash  String
+  displayName   String
+  email         String?
+  role          String   @default("USER") // ADMIN | USER
+  language      String   @default("zh-TW")
+  active        Boolean  @default(true)
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  createdIssues Issue[]   @relation("IssueCreator")
+  comments      Comment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Department {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  nameEn     String?
+  active     Boolean  @default(true)
+  members    User[]
+  assignedIssues Issue[] @relation("IssueAssignedDepartment")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Issue {
+  id                    String   @id @default(cuid())
+  issueNumber           String   @unique
+  productName           String
+  moNumber              String
+  content               String
+  priority              String   @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  status                String   @default("PENDING") // PENDING | IN_PROGRESS | AWAITING_CONFIRMATION | COMPLETED
+  createdById           String
+  createdBy             User     @relation("IssueCreator", fields: [createdById], references: [id])
+  assignedDepartmentId  String
+  assignedDepartment    Department @relation("IssueAssignedDepartment", fields: [assignedDepartmentId], references: [id])
+  images                IssueImage[]
+  comments              Comment[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  completedAt           DateTime?
+
+  @@index([status])
+  @@index([moNumber])
+  @@index([createdAt])
+}
+
+model IssueImage {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  url       String
+  filename  String
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
