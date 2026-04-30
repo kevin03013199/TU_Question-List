@@ -3,7 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getDict } from "@/lib/i18n";
-import { ROLES } from "@/lib/utils";
+import { classNames, ROLES } from "@/lib/utils";
+import { DepartmentBadge, UserAvatar } from "./Badges";
 
 type User = {
   id: string;
@@ -58,23 +59,27 @@ export default function AdminPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">{t.admin.title}</h1>
-        {savedHint && <span className="text-sm text-emerald-600">{savedHint}</span>}
+        <h1 className="text-2xl font-semibold tracking-tight">{t.admin.title}</h1>
+        {savedHint && (
+          <span className="pill bg-emerald-50 text-emerald-700 border border-emerald-200">
+            ✓ {savedHint}
+          </span>
+        )}
       </div>
 
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
         {(["users", "departments", "settings"] as const).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={
-              "px-4 py-2 text-sm border-b-2 -mb-px " +
-              (tab === k
-                ? "border-brand-600 text-brand-700 font-medium"
-                : "border-transparent text-slate-600 hover:text-slate-900")
-            }
+            className={classNames(
+              "px-4 py-1.5 text-sm rounded-lg transition",
+              tab === k
+                ? "bg-white text-brand-700 shadow-sm font-medium"
+                : "text-slate-600 hover:text-slate-900",
+            )}
           >
             {k === "users" ? t.admin.users : k === "departments" ? t.admin.departments : t.admin.settings}
           </button>
@@ -167,7 +172,7 @@ function UsersTab({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={createUser} className="card p-4 grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+      <form onSubmit={createUser} className="card p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
         <div>
           <label className="label">{t.login.username}</label>
           <input className="input" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
@@ -200,66 +205,79 @@ function UsersTab({
         <div className="md:col-span-6 flex items-center justify-between">
           {error && <span className="text-sm text-rose-600">{error}</span>}
           <button className="btn btn-primary ml-auto" disabled={submitting}>
-            {t.admin.newUser}
+            + {t.admin.newUser}
           </button>
         </div>
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="text-left px-3 py-2">{t.login.username}</th>
-              <th className="text-left px-3 py-2">{t.admin.displayName}</th>
-              <th className="text-left px-3 py-2">Email</th>
-              <th className="text-left px-3 py-2">{t.admin.role}</th>
-              <th className="text-left px-3 py-2">{t.admin.department}</th>
-              <th className="text-left px-3 py-2">Active</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className="border-t">
-                <td className="px-3 py-2 font-mono">{u.username}</td>
-                <td className="px-3 py-2">{u.displayName}</td>
-                <td className="px-3 py-2 text-slate-500">{u.email ?? "-"}</td>
-                <td className="px-3 py-2">
-                  <select
-                    className="input py-1"
-                    value={u.role}
-                    onChange={(e) => patch(u.id, { role: e.target.value })}
-                  >
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </td>
-                <td className="px-3 py-2">
-                  <select
-                    className="input py-1"
-                    value={u.departmentId ?? ""}
-                    onChange={(e) => patch(u.id, { departmentId: e.target.value || null })}
-                  >
-                    <option value="">--</option>
-                    {departments.map((d) => <option key={d.id} value={d.id}>{d.code}</option>)}
-                  </select>
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    className={"badge " + (u.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600")}
-                    onClick={() => patch(u.id, { active: !u.active })}
-                  >
-                    {u.active ? t.admin.activate : t.admin.deactivate}
-                  </button>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button className="btn btn-ghost text-brand-700" onClick={() => resetPassword(u.id)}>
-                    {t.admin.resetPassword}
-                  </button>
-                </td>
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table-modern">
+            <thead>
+              <tr>
+                <th>{t.admin.displayName}</th>
+                <th>{t.login.username}</th>
+                <th>Email</th>
+                <th>{t.admin.role}</th>
+                <th>{t.admin.department}</th>
+                <th>{locale === "en" ? "Active" : "啟用"}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar id={u.id} name={u.displayName} size={32} />
+                      <span className="font-medium text-slate-800">{u.displayName}</span>
+                    </div>
+                  </td>
+                  <td className="font-mono text-xs text-slate-500">{u.username}</td>
+                  <td className="text-sm text-slate-500">{u.email ?? "—"}</td>
+                  <td>
+                    <select
+                      className="input py-1 text-xs"
+                      value={u.role}
+                      onChange={(e) => patch(u.id, { role: e.target.value })}
+                    >
+                      {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      className="input py-1 text-xs"
+                      value={u.departmentId ?? ""}
+                      onChange={(e) => patch(u.id, { departmentId: e.target.value || null })}
+                    >
+                      <option value="">--</option>
+                      {departments.map((d) => <option key={d.id} value={d.id}>{d.code}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <button
+                      className={classNames(
+                        "pill cursor-pointer",
+                        u.active
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-500 border border-slate-200",
+                      )}
+                      onClick={() => patch(u.id, { active: !u.active })}
+                    >
+                      <span className={classNames("pill-dot", u.active ? "bg-emerald-500" : "bg-slate-400")} />
+                      {u.active ? (locale === "en" ? "Active" : "啟用中") : (locale === "en" ? "Inactive" : "已停用")}
+                    </button>
+                  </td>
+                  <td className="text-right">
+                    <button className="btn btn-ghost btn-sm text-brand-700" onClick={() => resetPassword(u.id)}>
+                      {t.admin.resetPassword}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -306,10 +324,10 @@ function DepartmentsTab({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={create} className="card p-4 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+      <form onSubmit={create} className="card p-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
         <div>
           <label className="label">{t.admin.code}</label>
-          <input className="input" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+          <input className="input font-mono" required placeholder="OP" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
         </div>
         <div>
           <label className="label">{t.admin.name}</label>
@@ -321,50 +339,62 @@ function DepartmentsTab({
         </div>
         <div className="flex items-center justify-between">
           {error && <span className="text-sm text-rose-600">{error}</span>}
-          <button className="btn btn-primary ml-auto">{t.admin.newDepartment}</button>
+          <button className="btn btn-primary ml-auto">+ {t.admin.newDepartment}</button>
         </div>
       </form>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="text-left px-3 py-2">{t.admin.code}</th>
-              <th className="text-left px-3 py-2">{t.admin.name}</th>
-              <th className="text-left px-3 py-2">{t.admin.nameEn}</th>
-              <th className="text-left px-3 py-2">Active</th>
-            </tr>
-          </thead>
-          <tbody>
-            {departments.map((d) => (
-              <tr key={d.id} className="border-t">
-                <td className="px-3 py-2 font-mono">{d.code}</td>
-                <td className="px-3 py-2">
-                  <input
-                    className="input py-1"
-                    defaultValue={d.name}
-                    onBlur={(e) => e.target.value !== d.name && patch(d.id, { name: e.target.value })}
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    className="input py-1"
-                    defaultValue={d.nameEn ?? ""}
-                    onBlur={(e) => patch(d.id, { nameEn: e.target.value || null })}
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    className={"badge " + (d.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600")}
-                    onClick={() => patch(d.id, { active: !d.active })}
-                  >
-                    {d.active ? t.admin.activate : t.admin.deactivate}
-                  </button>
-                </td>
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table-modern">
+            <thead>
+              <tr>
+                <th>{locale === "en" ? "Color" : "顏色"}</th>
+                <th>{t.admin.code}</th>
+                <th>{t.admin.name}</th>
+                <th>{t.admin.nameEn}</th>
+                <th>{locale === "en" ? "Active" : "啟用"}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {departments.map((d) => (
+                <tr key={d.id}>
+                  <td>
+                    <DepartmentBadge code={d.code} showName={false} />
+                  </td>
+                  <td className="font-mono">{d.code}</td>
+                  <td>
+                    <input
+                      className="input py-1 text-sm"
+                      defaultValue={d.name}
+                      onBlur={(e) => e.target.value !== d.name && patch(d.id, { name: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="input py-1 text-sm"
+                      defaultValue={d.nameEn ?? ""}
+                      onBlur={(e) => patch(d.id, { nameEn: e.target.value || null })}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      className={classNames(
+                        "pill cursor-pointer",
+                        d.active
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-500 border border-slate-200",
+                      )}
+                      onClick={() => patch(d.id, { active: !d.active })}
+                    >
+                      <span className={classNames("pill-dot", d.active ? "bg-emerald-500" : "bg-slate-400")} />
+                      {d.active ? (locale === "en" ? "Active" : "啟用中") : (locale === "en" ? "Inactive" : "已停用")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -408,7 +438,11 @@ function SettingsTab({
           value={refreshSeconds}
           onChange={(e) => setRefreshSeconds(Math.max(1, Number(e.target.value) || 1))}
         />
-        <p className="text-xs text-slate-500 mt-1">1 ~ 3600</p>
+        <p className="text-xs text-slate-500 mt-1">
+          {locale === "en"
+            ? "Default refresh interval for the issue list (1-3600 seconds). Users can override per session."
+            : "問題清單的預設自動更新間隔（1–3600 秒），使用者可在自己的頁面覆寫。"}
+        </p>
       </div>
       <button className="btn btn-primary" disabled={submitting}>
         {t.admin.saveSettings}

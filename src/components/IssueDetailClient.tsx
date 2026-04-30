@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { getDict } from "@/lib/i18n";
-import { classNames, formatDateTime, PRIORITY_COLORS, STATUS_COLORS, STATUSES, PRIORITIES } from "@/lib/utils";
+import { classNames, formatDateTime, relativeTime, STATUSES, PRIORITIES } from "@/lib/utils";
+import { DepartmentBadge, PriorityBadge, StatusBadge, UserAvatar } from "./Badges";
 
 type Issue = {
   id: string;
@@ -57,29 +58,11 @@ export default function IssueDetailClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function changeStatus(status: string) {
+  async function patch(body: Record<string, unknown>) {
     await fetch(`/api/issues/${issue.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    refresh();
-  }
-
-  async function changePriority(priority: string) {
-    await fetch(`/api/issues/${issue.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority }),
-    });
-    refresh();
-  }
-
-  async function changeDept(assignedDepartmentId: string) {
-    await fetch(`/api/issues/${issue.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assignedDepartmentId }),
+      body: JSON.stringify(body),
     });
     refresh();
   }
@@ -101,156 +84,180 @@ export default function IssueDetailClient({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Link href="/" className="btn btn-ghost text-brand-700">
           ← {t.issue.back}
         </Link>
-        <span className="font-mono text-sm text-slate-500">{issue.issueNumber}</span>
+        <span className="font-mono text-sm text-slate-400">{issue.issueNumber}</span>
       </div>
 
-      <div className="card p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-semibold">{issue.productName}</h1>
-            <div className="text-sm text-slate-500 mt-1">
-              MO: <span className="font-mono">{issue.moNumber}</span>
+      {/* Main card */}
+      <div className="card overflow-hidden">
+        {/* Hero */}
+        <div className="px-6 pt-5 pb-5 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                {issue.productName}
+              </h1>
+              <div className="text-sm text-slate-500 mt-1">
+                <span className="text-slate-400">MO</span>{" "}
+                <span className="font-mono text-slate-700">{issue.moNumber}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span className={classNames("badge", STATUS_COLORS[issue.status])}>
-              {t.statuses[issue.status as keyof typeof t.statuses]}
-            </span>
-            <span className={classNames("badge", PRIORITY_COLORS[issue.priority])}>
-              {t.priorities[issue.priority as keyof typeof t.priorities]}
-            </span>
-            <span className="badge bg-slate-100 text-slate-700">
-              {issue.assignedDepartment.code} - {issue.assignedDepartment.name}
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs text-slate-500 mb-1">{t.issue.content}</div>
-          <p className="whitespace-pre-wrap text-slate-800">{issue.content}</p>
-        </div>
-
-        {issue.images.length > 0 && (
-          <div>
-            <div className="text-xs text-slate-500 mb-1">{t.issue.images}</div>
             <div className="flex flex-wrap gap-2">
-              {issue.images.map((img) => (
-                <a key={img.id} href={img.url} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.url}
-                    alt={img.filename}
-                    className="h-32 w-32 object-cover rounded border"
-                  />
-                </a>
-              ))}
+              <StatusBadge status={issue.status} locale={locale} />
+              <PriorityBadge priority={issue.priority} locale={locale} />
+              <DepartmentBadge code={issue.assignedDepartment.code} name={issue.assignedDepartment.name} />
             </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-slate-500 border-t pt-4">
-          <div>
-            <div>{t.issue.createdBy}</div>
-            <div className="text-slate-800">{issue.createdBy.displayName}</div>
-          </div>
-          <div>
-            <div>{t.issue.createdAt}</div>
-            <div className="text-slate-800">{formatDateTime(issue.createdAt, locale)}</div>
-          </div>
-          <div>
-            <div>{t.issue.updatedAt}</div>
-            <div className="text-slate-800">{formatDateTime(issue.updatedAt, locale)}</div>
-          </div>
-          <div>
-            <div>{t.issue.completedAt}</div>
-            <div className="text-slate-800">{formatDateTime(issue.completedAt, locale)}</div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 border-t pt-4">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500">{t.issue.changeStatus}</label>
+        {/* Body */}
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <div className="label">{t.issue.content}</div>
+            <p className="whitespace-pre-wrap text-slate-800 leading-relaxed">
+              {issue.content}
+            </p>
+          </div>
+
+          {issue.images.length > 0 && (
+            <div>
+              <div className="label">{t.issue.images} · {issue.images.length}</div>
+              <div className="flex flex-wrap gap-3">
+                {issue.images.map((img) => (
+                  <a
+                    key={img.id}
+                    href={img.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group relative overflow-hidden rounded-lg border border-slate-200 hover:shadow-md transition"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt={img.filename}
+                      className="h-32 w-32 object-cover transition group-hover:scale-105"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-4">
+            <Meta label={t.issue.createdBy}>
+              <div className="flex items-center gap-2 mt-0.5">
+                <UserAvatar id={issue.createdBy.id} name={issue.createdBy.displayName} size={24} />
+                <span className="text-slate-800">{issue.createdBy.displayName}</span>
+              </div>
+            </Meta>
+            <Meta label={t.issue.createdAt}>{formatDateTime(issue.createdAt, locale)}</Meta>
+            <Meta label={t.issue.updatedAt}>{formatDateTime(issue.updatedAt, locale)}</Meta>
+            <Meta label={t.issue.completedAt}>
+              {issue.completedAt ? formatDateTime(issue.completedAt, locale) : "—"}
+            </Meta>
+          </div>
+        </div>
+
+        {/* Actions toolbar */}
+        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex flex-wrap items-end gap-3">
+          <Field label={t.issue.changeStatus}>
             <select
-              className="input py-1"
+              className="input py-1.5"
               value={issue.status}
-              onChange={(e) => changeStatus(e.target.value)}
+              onChange={(e) => patch({ status: e.target.value })}
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{t.statuses[s as keyof typeof t.statuses]}</option>
               ))}
             </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500">{t.issue.priority}</label>
+          </Field>
+          <Field label={t.issue.priority}>
             <select
-              className="input py-1"
+              className="input py-1.5"
               value={issue.priority}
-              onChange={(e) => changePriority(e.target.value)}
+              onChange={(e) => patch({ priority: e.target.value })}
             >
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>{t.priorities[p as keyof typeof t.priorities]}</option>
               ))}
             </select>
-          </div>
+          </Field>
           {isAdmin && (
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">{t.issue.assignedDepartment}</label>
+            <Field label={t.issue.assignedDepartment}>
               <select
-                className="input py-1"
+                className="input py-1.5"
                 value={issue.assignedDepartment.id}
-                onChange={(e) => changeDept(e.target.value)}
+                onChange={(e) => patch({ assignedDepartmentId: e.target.value })}
               >
                 {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.code} - {d.name}</option>
+                  <option key={d.id} value={d.id}>{d.code} · {d.name}</option>
                 ))}
               </select>
-            </div>
+            </Field>
           )}
-          {issue.status !== "COMPLETED" ? (
-            <button className="btn btn-primary ml-auto" onClick={() => changeStatus("COMPLETED")}>
-              {t.issue.complete}
-            </button>
-          ) : (
-            <button className="btn btn-secondary ml-auto" onClick={() => changeStatus("IN_PROGRESS")}>
-              {t.issue.reopen}
-            </button>
-          )}
+          <div className="ml-auto">
+            {issue.status !== "COMPLETED" ? (
+              <button className="btn btn-primary" onClick={() => patch({ status: "COMPLETED" })}>
+                ✓ {t.issue.complete}
+              </button>
+            ) : (
+              <button className="btn btn-secondary" onClick={() => patch({ status: "IN_PROGRESS" })}>
+                ↻ {t.issue.reopen}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="card p-6 space-y-4">
-        <h2 className="text-lg font-semibold">{t.issue.comments} ({issue.comments.length})</h2>
-        <div className="space-y-3">
+      {/* Comments */}
+      <div className="card p-6 space-y-5">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          {t.issue.comments}
+          <span className="pill bg-slate-100 text-slate-700 border border-slate-200">
+            {issue.comments.length}
+          </span>
+        </h2>
+
+        <ul className="space-y-4">
           {issue.comments.map((c) => (
-            <div key={c.id} className="border-l-2 border-brand-200 pl-3">
-              <div className="text-xs text-slate-500">
-                <span className="font-medium text-slate-700">{c.user.displayName}</span>
-                {" · "}
-                {formatDateTime(c.createdAt, locale)}
+            <li key={c.id} className="flex gap-3 fade-in">
+              <UserAvatar id={c.user.id} name={c.user.displayName} size={36} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-medium text-slate-800">{c.user.displayName}</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{relativeTime(c.createdAt, locale)}</span>
+                  <span className="text-slate-300 hidden md:inline">·</span>
+                  <span className="hidden md:inline">{formatDateTime(c.createdAt, locale)}</span>
+                </div>
+                <div className="mt-1 rounded-lg bg-slate-50 border border-slate-100 px-3.5 py-2.5 text-sm text-slate-800 whitespace-pre-wrap">
+                  {c.content}
+                </div>
               </div>
-              <p className="whitespace-pre-wrap text-slate-800 text-sm mt-1">{c.content}</p>
-            </div>
+            </li>
           ))}
           {issue.comments.length === 0 && (
-            <p className="text-sm text-slate-400">—</p>
+            <li className="text-sm text-slate-400 text-center py-4">
+              {locale === "en" ? "No replies yet — be the first." : "目前沒有回覆，留個訊息吧。"}
+            </li>
           )}
-        </div>
+        </ul>
 
-        <form onSubmit={submitComment} className="space-y-2 border-t pt-3">
+        <form onSubmit={submitComment} className="space-y-2 border-t pt-4">
           <label className="label">{t.issue.addComment}</label>
           <textarea
-            className="input min-h-[100px]"
+            className="input min-h-[110px]"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
+            placeholder={locale === "en" ? "Write a reply..." : "輸入回覆內容..."}
           />
           <div className="text-right">
             <button className="btn btn-primary" disabled={posting || !comment.trim()}>
-              {posting ? "..." : t.issue.submitComment}
+              {posting ? "..." : `📩 ${t.issue.submitComment}`}
             </button>
           </div>
         </form>
@@ -258,3 +265,24 @@ export default function IssueDetailClient({
     </div>
   );
 }
+
+function Meta({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">{label}</div>
+      <div className="text-sm text-slate-700 mt-0.5">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] uppercase tracking-wider text-slate-500 font-medium">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+// Avoid unused-import warning when classNames isn't used in some builds.
+void classNames;

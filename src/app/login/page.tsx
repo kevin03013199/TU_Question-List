@@ -38,45 +38,62 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold">{t.appName}</h1>
-          <select
-            className="text-xs border rounded px-2 py-1"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as "zh-TW" | "en")}
-          >
-            <option value="zh-TW">繁體中文</option>
-            <option value="en">English</option>
-          </select>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white text-lg font-bold shadow-md">
+            Q
+          </div>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight">{t.appName}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.login.hint}</p>
         </div>
-        <p className="text-sm text-slate-500 mb-4">{t.login.hint}</p>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="label">{t.login.username}</label>
-            <input
-              className="input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoFocus
-              required
-            />
+
+        <div className="card p-6 fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-medium">{t.login.title}</h2>
+            <select
+              className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white"
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as "zh-TW" | "en")}
+            >
+              <option value="zh-TW">繁體中文</option>
+              <option value="en">English</option>
+            </select>
           </div>
-          <div>
-            <label className="label">{t.login.password}</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error && <p className="text-sm text-rose-600">{error}</p>}
-          <button className="btn btn-primary w-full" disabled={loading}>
-            {loading ? "..." : t.login.submit}
-          </button>
-        </form>
+          <form onSubmit={onSubmit} className="space-y-3.5">
+            <div>
+              <label className="label">{t.login.username}</label>
+              <input
+                className="input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="label">{t.login.password}</label>
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
+                {error}
+              </p>
+            )}
+            <button className="btn btn-primary w-full mt-2" disabled={loading}>
+              {loading ? "..." : t.login.submit}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-[11px] text-slate-400 mt-6">
+          © {new Date().getFullYear()} TU Question List
+        </p>
       </div>
     </div>
   );
