@@ -5,6 +5,14 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  // Department / user palette colors are referenced via hash-mapped strings,
+  // so we explicitly safelist the dot/pill classes to keep them in the build.
+  safelist: [
+    {
+      pattern: /(bg|text|border|ring)-(blue|emerald|amber|violet|rose|cyan|orange|teal|pink|indigo|lime|fuchsia|sky|slate)-(50|100|200|300|400|500|600|700|800|900)/,
+    },
   ],
   theme: {
     extend: {

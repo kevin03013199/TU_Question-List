@@ -128,6 +128,8 @@ const dict = {
       required: "必填",
       language: "語言",
       genericError: "發生錯誤，請稍後再試",
+      sessionExpired: "登入狀態已過期，請重新登入",
+      invalidDepartment: "選擇的部門不存在或已停用，請重新選擇",
     },
   },
   en: {
@@ -254,6 +256,8 @@ const dict = {
       required: "Required",
       language: "Language",
       genericError: "Something went wrong, please try again",
+      sessionExpired: "Your session has expired, please sign in again",
+      invalidDepartment: "Selected department no longer exists, please re-select",
     },
   },
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { getDict } from "@/lib/i18n";
@@ -49,7 +50,16 @@ export default function NewIssueForm({
     setSubmitting(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setError(j.error || t.common.genericError);
+      const code = j.error;
+      if (code === "sessionExpired") {
+        setError(t.common.sessionExpired);
+        setTimeout(() => signOut({ callbackUrl: "/login" }), 1500);
+        return;
+      }
+      const map: Record<string, string> = {
+        invalidDepartment: t.common.invalidDepartment,
+      };
+      setError(map[code] ?? code ?? t.common.genericError);
       return;
     }
     const j = await res.json();

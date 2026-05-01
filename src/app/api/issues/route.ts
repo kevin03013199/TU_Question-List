@@ -7,6 +7,7 @@ import { generateIssueNumber } from "@/lib/utils";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
 const STATUSES = ["PENDING", "IN_PROGRESS", "AWAITING_CONFIRMATION", "COMPLETED"] as const;
@@ -139,7 +140,10 @@ export async function POST(req: Request) {
         assignedDepartments: {
           connect: payload.assignedDepartmentIds.map((id) => ({ id })),
         },
-        createdById: session.user.id,
+        // Connect by unique username instead of session-cached id, so a
+        // stale session (e.g. after a DB reset) still resolves to the
+        // current user record.
+        createdBy: { connect: { username: session.user.username } },
         images: { create: images },
       },
       include: { images: true, assignedDepartments: true },
@@ -148,6 +152,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ issue });
   } catch (e) {
     if (e instanceof ZodError) return fromZod(e);
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2025 = related record not found; usually the session refers to a
+      // user that no longer exists in the database.
+      if (e.code === "P2025") {
+        return NextResponse.json({ error: "sessionExpired" }, { status: 401 });
+      }
+      // P2003 = foreign-key violation (e.g. department id missing)
+      if (e.code === "P2003") {
+        return NextResponse.json({ error: "invalidDepartment" }, { status: 400 });
+      }
+    }
     console.error("POST /api/issues failed:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "internal error" },

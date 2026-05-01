@@ -1,10 +1,12 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 export default function LanguageSwitcher() {
   const { data: session, update } = useSession();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   if (!session) return null;
@@ -18,6 +20,8 @@ export default function LanguageSwitcher() {
         body: JSON.stringify({ language: lang }),
       });
       await update({ language: lang });
+      // Re-run server components so SSR-rendered pages pick up the new locale
+      router.refresh();
     });
   }
 
