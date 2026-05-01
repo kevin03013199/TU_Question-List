@@ -148,7 +148,7 @@ function UsersTab({
     setSubmitting(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setError(j.error || "error");
+      setError(translateError(j.error, t));
       return;
     }
     setForm({ username: "", password: "", displayName: "", email: "", role: "USER", departmentId: "" });
@@ -165,7 +165,7 @@ function UsersTab({
   }
 
   async function resetPassword(id: string) {
-    const np = window.prompt(t.admin.resetPassword + " — new password (min 4 chars)");
+    const np = window.prompt(t.admin.resetPasswordPrompt);
     if (!np || np.length < 4) return;
     await patch(id, { password: np });
   }
@@ -220,7 +220,7 @@ function UsersTab({
                 <th>Email</th>
                 <th>{t.admin.role}</th>
                 <th>{t.admin.department}</th>
-                <th>{locale === "en" ? "Active" : "啟用"}</th>
+                <th>{t.admin.activeLabel}</th>
                 <th></th>
               </tr>
             </thead>
@@ -265,7 +265,7 @@ function UsersTab({
                       onClick={() => patch(u.id, { active: !u.active })}
                     >
                       <span className={classNames("pill-dot", u.active ? "bg-emerald-500" : "bg-slate-400")} />
-                      {u.active ? (locale === "en" ? "Active" : "啟用中") : (locale === "en" ? "Inactive" : "已停用")}
+                      {u.active ? t.admin.activeOn : t.admin.activeOff}
                     </button>
                   </td>
                   <td className="text-right">
@@ -306,7 +306,7 @@ function DepartmentsTab({
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setError(j.error || "error");
+      setError(translateError(j.error, t));
       return;
     }
     setForm({ code: "", name: "", nameEn: "" });
@@ -348,11 +348,11 @@ function DepartmentsTab({
           <table className="table-modern">
             <thead>
               <tr>
-                <th>{locale === "en" ? "Color" : "顏色"}</th>
+                <th>{t.admin.color}</th>
                 <th>{t.admin.code}</th>
                 <th>{t.admin.name}</th>
                 <th>{t.admin.nameEn}</th>
-                <th>{locale === "en" ? "Active" : "啟用"}</th>
+                <th>{t.admin.activeLabel}</th>
               </tr>
             </thead>
             <tbody>
@@ -387,7 +387,7 @@ function DepartmentsTab({
                       onClick={() => patch(d.id, { active: !d.active })}
                     >
                       <span className={classNames("pill-dot", d.active ? "bg-emerald-500" : "bg-slate-400")} />
-                      {d.active ? (locale === "en" ? "Active" : "啟用中") : (locale === "en" ? "Inactive" : "已停用")}
+                      {d.active ? t.admin.activeOn : t.admin.activeOff}
                     </button>
                   </td>
                 </tr>
@@ -398,6 +398,17 @@ function DepartmentsTab({
       </div>
     </div>
   );
+}
+
+function translateError(code: string | undefined, t: ReturnType<typeof getDict>) {
+  if (!code) return t.common.genericError;
+  const map: Record<string, string> = {
+    passwordTooShort: t.admin.passwordTooShort,
+    usernameTooShort: t.admin.usernameTooShort,
+    duplicateUsername: t.admin.duplicateUsername,
+    duplicateDeptCode: t.admin.duplicateDeptCode,
+  };
+  return map[code] ?? code;
 }
 
 function SettingsTab({
@@ -438,11 +449,7 @@ function SettingsTab({
           value={refreshSeconds}
           onChange={(e) => setRefreshSeconds(Math.max(1, Number(e.target.value) || 1))}
         />
-        <p className="text-xs text-slate-500 mt-1">
-          {locale === "en"
-            ? "Default refresh interval for the issue list (1-3600 seconds). Users can override per session."
-            : "問題清單的預設自動更新間隔（1–3600 秒），使用者可在自己的頁面覆寫。"}
-        </p>
+        <p className="text-xs text-slate-500 mt-1">{t.admin.refreshIntervalHint}</p>
       </div>
       <button className="btn btn-primary" disabled={submitting}>
         {t.admin.saveSettings}

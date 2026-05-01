@@ -15,7 +15,7 @@ export default async function IssueDetailPage({ params }: { params: { id: string
     where: { id: params.id },
     include: {
       createdBy: { select: { id: true, displayName: true, username: true } },
-      assignedDepartment: true,
+      assignedDepartments: { orderBy: { code: "asc" } },
       images: true,
       comments: {
         include: { user: { select: { id: true, displayName: true, username: true } } },

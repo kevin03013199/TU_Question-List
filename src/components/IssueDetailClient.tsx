@@ -3,13 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { getDict } from "@/lib/i18n";
-import { classNames, formatDateTime, relativeTime, STATUSES, PRIORITIES } from "@/lib/utils";
+import { classNames, formatDateTime, relativeTime, getDeptColor, STATUSES, PRIORITIES } from "@/lib/utils";
 import { DepartmentBadge, PriorityBadge, StatusBadge, UserAvatar } from "./Badges";
+
+type Department = { id: string; name: string; code: string };
 
 type Issue = {
   id: string;
   issueNumber: string;
-  productName: string;
+  modelName: string;
   moNumber: string;
   content: string;
   priority: string;
@@ -18,7 +20,7 @@ type Issue = {
   updatedAt: string;
   completedAt: string | null;
   createdBy: { id: string; displayName: string; username: string };
-  assignedDepartment: { id: string; name: string; code: string };
+  assignedDepartments: Department[];
   images: { id: string; url: string; filename: string }[];
   comments: {
     id: string;
@@ -37,12 +39,13 @@ export default function IssueDetailClient({
   locale: string;
   isAdmin: boolean;
   initialIssue: Issue;
-  departments: { id: string; name: string; code: string }[];
+  departments: Department[];
 }) {
   const t = getDict(locale);
   const [issue, setIssue] = useState<Issue>(initialIssue);
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
+  const [error, setError] = useState("");
 
   async function refresh() {
     const res = await fetch(`/api/issues/${issue.id}`, { cache: "no-store" });
@@ -59,12 +62,30 @@ export default function IssueDetailClient({
   }, []);
 
   async function patch(body: Record<string, unknown>) {
-    await fetch(`/api/issues/${issue.id}`, {
+    setError("");
+    const res = await fetch(`/api/issues/${issue.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error || t.common.genericError);
+      return;
+    }
     refresh();
+  }
+
+  async function toggleDept(deptId: string) {
+    const has = issue.assignedDepartments.some((d) => d.id === deptId);
+    const next = has
+      ? issue.assignedDepartments.filter((d) => d.id !== deptId).map((d) => d.id)
+      : [...issue.assignedDepartments.map((d) => d.id), deptId];
+    if (next.length === 0) {
+      setError(t.issue.noDeptSelected);
+      return;
+    }
+    await patch({ assignedDepartmentIds: next });
   }
 
   async function submitComment(e: FormEvent) {
@@ -99,7 +120,7 @@ export default function IssueDetailClient({
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-                {issue.productName}
+                {issue.modelName}
               </h1>
               <div className="text-sm text-slate-500 mt-1">
                 <span className="text-slate-400">MO</span>{" "}
@@ -109,8 +130,12 @@ export default function IssueDetailClient({
             <div className="flex flex-wrap gap-2">
               <StatusBadge status={issue.status} locale={locale} />
               <PriorityBadge priority={issue.priority} locale={locale} />
-              <DepartmentBadge code={issue.assignedDepartment.code} name={issue.assignedDepartment.name} />
             </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {issue.assignedDepartments.map((d) => (
+              <DepartmentBadge key={d.id} code={d.code} name={d.name} />
+            ))}
           </div>
         </div>
 
@@ -163,53 +188,79 @@ export default function IssueDetailClient({
         </div>
 
         {/* Actions toolbar */}
-        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex flex-wrap items-end gap-3">
-          <Field label={t.issue.changeStatus}>
-            <select
-              className="input py-1.5"
-              value={issue.status}
-              onChange={(e) => patch({ status: e.target.value })}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{t.statuses[s as keyof typeof t.statuses]}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t.issue.priority}>
-            <select
-              className="input py-1.5"
-              value={issue.priority}
-              onChange={(e) => patch({ priority: e.target.value })}
-            >
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>{t.priorities[p as keyof typeof t.priorities]}</option>
-              ))}
-            </select>
-          </Field>
-          {isAdmin && (
-            <Field label={t.issue.assignedDepartment}>
+        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 space-y-3">
+          {error && (
+            <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label={t.issue.changeStatus}>
               <select
                 className="input py-1.5"
-                value={issue.assignedDepartment.id}
-                onChange={(e) => patch({ assignedDepartmentId: e.target.value })}
+                value={issue.status}
+                onChange={(e) => patch({ status: e.target.value })}
               >
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.code} · {d.name}</option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{t.statuses[s as keyof typeof t.statuses]}</option>
                 ))}
               </select>
             </Field>
-          )}
-          <div className="ml-auto">
-            {issue.status !== "COMPLETED" ? (
-              <button className="btn btn-primary" onClick={() => patch({ status: "COMPLETED" })}>
-                ✓ {t.issue.complete}
-              </button>
-            ) : (
-              <button className="btn btn-secondary" onClick={() => patch({ status: "IN_PROGRESS" })}>
-                ↻ {t.issue.reopen}
-              </button>
-            )}
+            <Field label={t.issue.priority}>
+              <select
+                className="input py-1.5"
+                value={issue.priority}
+                onChange={(e) => patch({ priority: e.target.value })}
+              >
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>{t.priorities[p as keyof typeof t.priorities]}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="ml-auto">
+              {issue.status !== "COMPLETED" ? (
+                <button className="btn btn-primary" onClick={() => patch({ status: "COMPLETED" })}>
+                  ✓ {t.issue.complete}
+                </button>
+              ) : (
+                <button className="btn btn-secondary" onClick={() => patch({ status: "IN_PROGRESS" })}>
+                  ↻ {t.issue.reopen}
+                </button>
+              )}
+            </div>
           </div>
+
+          {isAdmin && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500 font-medium mb-1.5">
+                {t.issue.assignedDepartments}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {departments.map((d) => {
+                  const active = issue.assignedDepartments.some((x) => x.id === d.id);
+                  const c = getDeptColor(d.code);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDept(d.id)}
+                      className={classNames(
+                        "rounded-full border px-2.5 py-0.5 text-xs flex items-center gap-1.5 transition",
+                        active
+                          ? c.pill + " ring-2 ring-offset-1 ring-brand-300"
+                          : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50",
+                      )}
+                    >
+                      <span className={classNames("h-1.5 w-1.5 rounded-full", c.dot)} />
+                      <span className="font-mono font-semibold">{d.code}</span>
+                      {active && <span className="text-current">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -242,7 +293,7 @@ export default function IssueDetailClient({
           ))}
           {issue.comments.length === 0 && (
             <li className="text-sm text-slate-400 text-center py-4">
-              {locale === "en" ? "No replies yet — be the first." : "目前沒有回覆，留個訊息吧。"}
+              {t.issue.noComments}
             </li>
           )}
         </ul>
@@ -253,7 +304,7 @@ export default function IssueDetailClient({
             className="input min-h-[110px]"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={locale === "en" ? "Write a reply..." : "輸入回覆內容..."}
+            placeholder={t.issue.commentPlaceholder}
           />
           <div className="text-right">
             <button className="btn btn-primary" disabled={posting || !comment.trim()}>
@@ -283,6 +334,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
-// Avoid unused-import warning when classNames isn't used in some builds.
-void classNames;

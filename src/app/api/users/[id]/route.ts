@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import bcrypt from "bcryptjs";
 
 const patchSchema = z.object({
@@ -11,25 +11,40 @@ const patchSchema = z.object({
   role: z.enum(["ADMIN", "USER"]).optional(),
   departmentId: z.string().optional().nullable(),
   active: z.boolean().optional(),
-  password: z.string().min(4).max(100).optional(),
+  password: z.string().min(4, "passwordTooShort").max(100).optional(),
 });
 
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    const body = await req.json();
+    const data = patchSchema.parse(body);
+    const updateData: Record<string, unknown> = { ...data };
+    if (data.password) {
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      delete updateData.password;
+    }
+    if (data.email === "") updateData.email = null;
+    const user = await prisma.user.update({ where: { id: params.id }, data: updateData });
+    return NextResponse.json({ user: { id: user.id } });
+  } catch (e) {
+    if (e instanceof ZodError) {
+      const first = e.errors[0];
+      return NextResponse.json(
+        { error: first?.message ?? "validation failed", field: first?.path.join(".") },
+        { status: 400 },
+      );
+    }
+    console.error("PATCH /api/users/[id] failed:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "internal error" },
+      { status: 500 },
+    );
   }
-  const body = await req.json();
-  const data = patchSchema.parse(body);
-  const updateData: Record<string, unknown> = { ...data };
-  if (data.password) {
-    updateData.passwordHash = await bcrypt.hash(data.password, 10);
-    delete updateData.password;
-  }
-  if (data.email === "") updateData.email = null;
-  const user = await prisma.user.update({ where: { id: params.id }, data: updateData });
-  return NextResponse.json({ user: { id: user.id } });
 }

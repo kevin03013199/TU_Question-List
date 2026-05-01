@@ -53,6 +53,13 @@ if errorlevel 1 goto fail
 REM ---- Apply database migrations ----
 echo.
 echo === Step 2/3: Setting up database ===
+REM If the existing DB was created against an older schema, this will detect
+REM the drift and start clean. Comment this out if you want to keep data.
+if exist "prisma\dev.db" (
+  echo [info] Existing dev.db detected. Resetting for new schema...
+  del /Q "prisma\dev.db"
+  if exist "prisma\dev.db-journal" del /Q "prisma\dev.db-journal"
+)
 call npx prisma migrate deploy
 if errorlevel 1 goto fail
 call npx prisma generate

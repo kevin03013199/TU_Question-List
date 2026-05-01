@@ -11,7 +11,7 @@ type Department = { id: string; name: string; nameEn: string | null; code: strin
 type IssueRow = {
   id: string;
   issueNumber: string;
-  productName: string;
+  modelName: string;
   moNumber: string;
   content: string;
   priority: string;
@@ -20,7 +20,7 @@ type IssueRow = {
   updatedAt: string;
   completedAt: string | null;
   createdBy: { id: string; displayName: string; username: string };
-  assignedDepartment: Department;
+  assignedDepartments: Department[];
   images: { id: string; url: string }[];
   _count: { comments: number };
 };
@@ -111,9 +111,7 @@ export default function IssueListClient({
             {archived ? t.history.title : t.nav.active}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {archived
-              ? (locale === "en" ? "Completed issues archive" : "已完成問題的歷史紀錄")
-              : (locale === "en" ? "Issues currently being tracked across departments" : "各部門進行中的問題")}
+            {archived ? t.issue.historySubtitle : t.issue.activeSubtitle}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -149,7 +147,7 @@ export default function IssueListClient({
       {/* Stats */}
       {!archived && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <StatCard label={locale === "en" ? "Open total" : "進行中"} value={stats.total} tone="brand" />
+          <StatCard label={t.issue.openTotal} value={stats.total} tone="brand" />
           <StatCard label={t.statuses.PENDING} value={stats.pending} tone="amber" />
           <StatCard label={t.statuses.IN_PROGRESS} value={stats.inProgress} tone="blue" />
           <StatCard label={t.statuses.AWAITING_CONFIRMATION} value={stats.awaiting} tone="violet" />
@@ -192,9 +190,9 @@ export default function IssueListClient({
             <thead>
               <tr>
                 <th>{t.issue.issueNumber}</th>
-                <th>{t.issue.productName}</th>
+                <th>{t.issue.modelName}</th>
                 <th>{t.issue.moNumber}</th>
-                <th>{t.issue.assignedDepartment}</th>
+                <th>{t.issue.assignedDepartments}</th>
                 <th>{t.issue.status}</th>
                 <th>{t.issue.priority}</th>
                 <th>{t.issue.createdBy}</th>
@@ -225,7 +223,7 @@ export default function IssueListClient({
                     </Link>
                   </td>
                   <td>
-                    <div className="font-medium text-slate-900">{it.productName}</div>
+                    <div className="font-medium text-slate-900">{it.modelName}</div>
                     <div className="text-xs text-slate-500 line-clamp-1 max-w-[280px] mt-0.5">
                       {it.content}
                     </div>
@@ -240,7 +238,11 @@ export default function IssueListClient({
                   </td>
                   <td className="font-mono text-xs">{it.moNumber}</td>
                   <td>
-                    <DepartmentBadge code={it.assignedDepartment.code} name={it.assignedDepartment.name} />
+                    <div className="flex flex-wrap gap-1">
+                      {it.assignedDepartments.map((d) => (
+                        <DepartmentBadge key={d.id} code={d.code} name={d.name} showName={false} />
+                      ))}
+                    </div>
                   </td>
                   <td>
                     <StatusBadge status={it.status} locale={locale} />

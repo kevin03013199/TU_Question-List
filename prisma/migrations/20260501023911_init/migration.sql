@@ -29,18 +29,16 @@ CREATE TABLE "Department" (
 CREATE TABLE "Issue" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "issueNumber" TEXT NOT NULL,
-    "productName" TEXT NOT NULL,
+    "modelName" TEXT NOT NULL,
     "moNumber" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "priority" TEXT NOT NULL DEFAULT 'MEDIUM',
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "createdById" TEXT NOT NULL,
-    "assignedDepartmentId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "completedAt" DATETIME,
-    CONSTRAINT "Issue_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Issue_assignedDepartmentId_fkey" FOREIGN KEY ("assignedDepartmentId") REFERENCES "Department" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "Issue_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -71,6 +69,14 @@ CREATE TABLE "Setting" (
     "updatedAt" DATETIME NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "_IssueAssignedDepartments" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL,
+    CONSTRAINT "_IssueAssignedDepartments_A_fkey" FOREIGN KEY ("A") REFERENCES "Department" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "_IssueAssignedDepartments_B_fkey" FOREIGN KEY ("B") REFERENCES "Issue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
@@ -88,3 +94,9 @@ CREATE INDEX "Issue_moNumber_idx" ON "Issue"("moNumber");
 
 -- CreateIndex
 CREATE INDEX "Issue_createdAt_idx" ON "Issue"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_IssueAssignedDepartments_AB_unique" ON "_IssueAssignedDepartments"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_IssueAssignedDepartments_B_index" ON "_IssueAssignedDepartments"("B");

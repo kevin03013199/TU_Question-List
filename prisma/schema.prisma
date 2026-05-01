@@ -23,7 +23,7 @@ model User {
   passwordHash  String
   displayName   String
   email         String?
-  role          String   @default("USER") // ADMIN | USER
+  role          String   @default("USER")
   language      String   @default("zh-TW")
   active        Boolean  @default(true)
   departmentId  String?
@@ -35,29 +35,28 @@ model User {
 }
 
 model Department {
-  id         String   @id @default(cuid())
-  code       String   @unique
-  name       String
-  nameEn     String?
-  active     Boolean  @default(true)
-  members    User[]
-  assignedIssues Issue[] @relation("IssueAssignedDepartment")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  nameEn          String?
+  active          Boolean   @default(true)
+  members         User[]
+  assignedIssues  Issue[]   @relation("IssueAssignedDepartments")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Issue {
   id                    String   @id @default(cuid())
   issueNumber           String   @unique
-  productName           String
+  modelName             String
   moNumber              String
   content               String
-  priority              String   @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
-  status                String   @default("PENDING") // PENDING | IN_PROGRESS | AWAITING_CONFIRMATION | COMPLETED
+  priority              String   @default("MEDIUM")
+  status                String   @default("PENDING")
   createdById           String
   createdBy             User     @relation("IssueCreator", fields: [createdById], references: [id])
-  assignedDepartmentId  String
-  assignedDepartment    Department @relation("IssueAssignedDepartment", fields: [assignedDepartmentId], references: [id])
+  assignedDepartments   Department[] @relation("IssueAssignedDepartments")
   images                IssueImage[]
   comments              Comment[]
   createdAt             DateTime @default(now())
